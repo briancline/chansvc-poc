@@ -1,21 +1,63 @@
 #include <bot.h>
 
-void bot_init() {
+void bot_init()
+{
 	FILE *out;
 	
-	ssend("PASS %s\n", bot.password);
-	ssend("SERVER %s 2 0 %ld P10 %c]] :%s\n", bot.server->name, time(NULL), bot.scnum, bot.servinfo);
+	add_server(bot.server->name, bot.server->numeric, NULL, bot.serverDescription);
+	add_user(bot.nick, bot.ident, bot.host, bot.modes, bot.numeric, bot.realName);
+	add_channel(bot.debugChan, "+nt", time(NULL));
+	add_channel(bot.protoChan, "+nt", time(NULL));
+	
+	ssend("PASS %s\n", bot.uplinkPassword);
+	ssend("SERVER %s 2 %ld %ld P10 %s]]] :%s\n", bot.server->name, time(NULL), time(NULL), bot.serverNumeric, bot.serverDescription);
 	
 	bot.active = true;
-	if(out = fopen("w.pid", "wt")) {
+	if((out = fopen("w.pid", "wt"))) {
 		fprintf(out, "%i\n", getpid());
 		fclose(out);
 	}
 }
 
-void bot_burst() {
-	ssend("%c N %s 1 %lu %s %s %s DAqAAF %s :%s\n", bot.scnum, bot.nick, time(NULL), bot.ident, bot.host, bot.modes, bot.fullnum, bot.nickinfo);
-	ssend("%c B %s 127008000 +tn %s:o\n", bot.scnum, bot.debugChan, bot.fullnum);
-	ssend("%c B %s 127008000 +tn %s:o\n", bot.scnum, bot.protoChan, bot.fullnum);
-	ssend("%c EB\n", bot.scnum);
+void burst_servers()
+{
+	struct Server* server = servers;
+	
+	while(server) {
+		//irc_send(bot.serverNumeric, TOK_SERVER, "%s ")
+		server = server->next;
+	}
+}
+
+void burst_glines()
+{
+}
+
+void burst_jupes()
+{
+}
+
+void burst_channels()
+{
+	struct Channel* chan = channels;
+	
+	while(chan) {
+		irc_send(bot.serverNumeric, TOK_BURST, "%s 127008000 +tn %s:o", 
+			chan->name, bot.numeric);
+		
+		chan = chan->next;
+	}
+}
+
+void burst_users()
+{
+	struct User* user = users;
+	
+	while(user) {
+		irc_send(bot.serverNumeric, TOK_NICK, "%s 1 %lu %s %s %s AAAAAA %s :%s", 
+			user->nick, time(NULL), user->ident, user->host, 
+			user->modes, user->numeric, user->realName);
+			
+		user = user->next;
+	}
 }

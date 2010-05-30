@@ -1,7 +1,12 @@
+#ifndef __BOT_H
+#define __BOT_H
+
+#include <stdlib.h>
 #include <stdio.h>
 #include <signal.h>
 #include <string.h>
 #include <unistd.h>
+#include <assert.h>
 #include <time.h>
 #include <sys/stat.h>
 #include <stdarg.h>
@@ -14,15 +19,13 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-#include <proto.h>
-
 #define BadPtr(x) (!(x) || (*(x) == '\0'))
 #define FILE_CONF "w.conf"
 #define FILE_LOG "w.log"
 #define CTCP_CHAR '\001'
 #define MAXLEN 512     /* Max line length */
 #define MAXBUF 1024    /* Max buffer length */
-#define MAXUSERS 100   /* Max # of nicks */
+#define MAXUSERS 100   /* Max # of users */
 #define MAXSERVERS 20  /* Max # of servers */
 #define NICKLEN 31     /* Should be NICKLEN+1 to allow for \0 */
 #define NUMNICKBASE 64
@@ -32,4 +35,7 @@
 #define false 0;
 
 #include <structs.h>
+#include <proto.h>
 #include <globals.h>
+
+#endif __BOT_H

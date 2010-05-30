@@ -2,7 +2,7 @@
 #include "bot.h"
 #undef DEF_GLOBALS
 
-main(int argc, char **argv) {
+int main(int argc, char **argv) {
 	fd_set fdvar;
 	struct timeval timeout;
 	bot.start = time(NULL);
@@ -13,12 +13,15 @@ main(int argc, char **argv) {
 	signal(SIGBUS, sig_bus);
 	//if(fork()) exit(0);
 	
-	bot.server = (struct servinfo *) calloc(1, sizeof(struct servinfo));
+	bot.server = (struct Server *) calloc(1, sizeof(struct Server));
 	loadconf();
-	socketfd = get_connection(bot.remotehost, bot.remoteport);
-	if(socketfd == -1) exit(0);
+	socketfd = get_connection(bot.uplinkHost, bot.uplinkPort);
+	if(socketfd == -1) {
+		printf("Could not connect to %s:%d.\n", bot.uplinkHost, bot.uplinkPort);
+		exit(0);
+	}
 	
-	strcpy(bot.version, "Channel Service 0.1a");
+	strcpy(bot.version, "Channel Service 0.1.1a");
 	bot_init();
 	
 	while(1) {
@@ -34,4 +37,6 @@ main(int argc, char **argv) {
 				break;
 		}
 	}
+	
+	return 0;
 }

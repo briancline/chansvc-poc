@@ -1,63 +1,65 @@
+#define TOK_ERROR "ERROR"
+#define CMD_ERROR "ERROR"
+#define TOK_PASS "PASS"
+#define CMD_PASS "PASS"
+#define TOK_SERVER "S"
+#define CMD_SERVER "SERVER"
+#define TOK_BURST "B"
+#define TOK_END_OF_BURST "EB"
+#define TOK_END_OF_BURST_ACK "EA"
+#define TOK_PING "G"
+#define TOK_PONG "Z"
+#define TOK_SQUIT "SQ"
+#define TOK_NICK "N"
+#define TOK_MODE "M"
+#define TOK_QUIT "Q"
+#define TOK_KILL "D"
+#define TOK_JOIN "J"
+#define TOK_PART "L"
+#define TOK_CREATE "C"
+#define TOK_PRIVMSG "P"
+#define TOK_NOTICE "O"
+#define TOK_ADMIN "AD"
+#define TOK_VERSION "V"
+
 #ifdef DEF_GLOBALS
+
 int socketfd;
-int log;
+int logfd;
 char line[MAXLEN];
 char linebuff[100];
 char strbuff[70];
-struct botinfo bot;
-struct servinfo *servers = NULL;
-struct nickinfo *nicks = NULL;
-char convert2y[NUMNICKBASE] = {
-  'A','B','C','D','E','F','G','H',
-  'I','J','K','L','M','N','O','P',
-  'Q','R','S','T','U','V','W','X',
-  'Y','Z','a','b','c','d','e','f',
-  'g','h','i','j','k','l','m','n',
-  'o','p','q','r','s','t','u','v',
-  'w','x','y','z','0','1','2','3',
-  '4','5','6','7','8','9','[',']'
-};
-unsigned int convert2n[] = {
-   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  52,53,54,55,56,57,58,59,60,61, 0, 0, 0, 0, 0, 0, 
-   0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,
-  15,16,17,18,19,20,21,22,23,24,25,62, 0,63, 0, 0,
-   0,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,
-  41,42,43,44,45,46,47,48,49,50,51, 0, 0, 0, 0, 0,
+struct Bot bot;
+struct Server *servers = NULL;
+struct User *users = NULL;
+struct Channel *channels = NULL;
 
-   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-};
-struct PARSECOM parsetable[] = {
-	{ "SERVER",	      parse_server  },
-	{ "BURST",        parse_burst   },
-	{ "END_OF_BURST", parse_eob     },
-	{ "EOB_ACK",      parse_eob_ack },
-	{ "PING",         parse_ping    },
-	{ "SQUIT",        parse_squit   },
-	{ "PASS",         parse_pass    },
-	{ "NICK",         parse_nick    },
-	{ "MODE",         parse_mode    },
-	{ "QUIT",         parse_quit    },
-	{ "KILL",         parse_kill    },
-	{ "JOIN",         parse_join    },
-	{ "PART",         parse_part    },
-	{ "CREATE",       parse_create  },
-	{ "PRIVMSG",      parse_privmsg },
-	{ "ADMIN",        parse_admin   },
-	{ "VERSION",      parse_version },
-	{ NULL,           NULL          }
+struct ProtocolHandler parsetable[] = {
+	{ CMD_ERROR,              parse_error   },
+	{ TOK_PASS,               parse_pass    },
+	{ CMD_SERVER,             parse_server_uplink  },
+	{ TOK_SERVER,	           parse_server  },
+	{ TOK_BURST,              parse_burst   },
+	{ TOK_END_OF_BURST,       parse_eob     },
+	{ TOK_END_OF_BURST_ACK,   parse_eob_ack },
+	{ TOK_PING,               parse_ping    },
+	{ TOK_PONG,               parse_ping    },
+	{ TOK_SQUIT,              parse_squit   },
+	{ TOK_NICK,               parse_nick    },
+	{ TOK_MODE,               parse_mode    },
+	{ TOK_QUIT,               parse_quit    },
+	{ TOK_KILL,               parse_kill    },
+	{ TOK_JOIN,               parse_join    },
+	{ TOK_PART,               parse_part    },
+	{ TOK_CREATE,             parse_create  },
+	{ TOK_PRIVMSG,            parse_privmsg },
+	{ TOK_ADMIN,              parse_admin   },
+	{ TOK_VERSION,            parse_version },
+	{ NULL,                   NULL          }
 };
 
-struct USERCOM commands[] = {
+
+struct CommandHandler commands[] = {
 	{ "WHOIS",           u_whois       , 0,    1 },
 	{ "RAW",             u_raw         , 0,    1 },
 	{ "TL",              u_traverse    , 0,    0 },
@@ -70,20 +72,41 @@ struct USERCOM commands[] = {
 	{ NULL,              NULL          , 0,    0 }
 };
 
+
 ////////////////////////////////////////////////////
 #else
 ////////////////////////////////////////////////////
 
 extern int socketfd;
-extern int log;
+extern int logfd;
 extern char line[];
 extern char linebuff[];
 extern char strbuff[];
-extern struct botinfo bot;
-extern struct servinfo *servers;
-extern struct nickinfo *nicks;
-extern char convert2y[];
-extern unsigned int convert2n[];
-extern struct PARSECOM parsetable[];
-extern struct USERCOM commands[];
-#endif
+extern struct Bot bot;
+extern struct Server *servers;
+extern struct User *users;
+extern struct Channel *channels;
+extern struct ProtocolHandler parsetable[];
+extern struct CommandHandler commands[];
+
+#endif //DEF_GLOBALS
+
+
+/** Evaluate to non-zero if \a ADDR (of type struct irc_in_addr) is an IPv4 address. */
+#define irc_in_addr_is_ipv4(ADDR) (!(ADDR)->in6_16[0] && !(ADDR)->in6_16[1] && !(ADDR)->in6_16[2] \
+                                   && !(ADDR)->in6_16[3] && !(ADDR)->in6_16[4] \
+                                   && ((!(ADDR)->in6_16[5] && (ADDR)->in6_16[6]) \
+                                       || (ADDR)->in6_16[5] == 65535))
+
+
+/** Maximum length of a full user numnick. */
+#define NUMNICKLEN 5            /* strlen("YYXXX") */
+/** Number of bits encoded in one numnick character. */
+#define NUMNICKLOG 6
+/** Bitmask to select value of next numnick character. */
+#define NUMNICKMASK 63          /* (NUMNICKBASE-1) */
+/** Number of servers representable in a numnick. */
+#define NN_MAX_SERVER 4096      /* (NUMNICKBASE * NUMNICKBASE) */
+/** Number of clients representable in a numnick. */
+#define NN_MAX_CLIENT 262144    /* NUMNICKBASE ^ 3 */
+

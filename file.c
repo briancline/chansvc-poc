@@ -2,23 +2,25 @@
 
 void loadconf() {
 	FILE *fp;
-	char buffer[100], *field = NULL, *ptr = NULL;
+	char buffer[100], *field = NULL;
 	buffer[0] = '\0';
 	
 	if((fp = fopen(FILE_CONF, "r")) == NULL) exit(0);
 	
 	while(fgets(buffer, 100, fp)) {
-		if(buffer[0] == '*' || buffer[0] == '\n') continue;
-		if(field = strchr(buffer, ' ')) *field++ = '\0';
+		if(buffer[0] == '*' || buffer[0] == '\n' || buffer[0] == '\r')
+			continue;
+		if((field = strchr(buffer, ' ')))
+		 	*field++ = '\0';
 
 		strip_newline(field);
 		
 		if(!strcmp(buffer, "RSERVER"))
-			strcpy(bot.remotehost, field);
+			strcpy(bot.uplinkHost, field);
 		if(!strcmp(buffer, "RPORT"))
-			bot.remoteport = atoi(field);
+			bot.uplinkPort = atoi(field);
 		if(!strcmp(buffer, "RPASS"))
-			strcpy(bot.password, field);
+			strcpy(bot.uplinkPassword, field);
 		if(!strcmp(buffer, "NICK"))
 			strcpy(bot.nick, field);
 		if(!strcmp(buffer, "IDENT"))
@@ -26,30 +28,30 @@ void loadconf() {
 		if(!strcmp(buffer, "HOST"))
 			strcpy(bot.host, field);
 		if(!strcmp(buffer, "COMMENT"))
-			strcpy(bot.nickinfo, field);
+			strcpy(bot.realName, field);
 		if(!strcmp(buffer, "MODES"))
 			strcpy(bot.modes, field);
 		if(!strcmp(buffer, "SERVER"))
 			strcpy(bot.server->name, field);
 		if(!strcmp(buffer, "SCOMMENT"))
-			strcpy(bot.servinfo, field);
+			strcpy(bot.serverDescription, field);
 		if(!strcmp(buffer, "DEBUGCHAN"))
 			strcpy(bot.debugChan, field);
 		if(!strcmp(buffer, "PROTOCHAN"))
 			strcpy(bot.protoChan, field);
 		if(!strcmp(buffer, "NUM")) {
-			bot.snum = atoi(field);
-			bot.scnum = convert2y[bot.snum];
-			bot.server->numeric = bot.scnum;
+			bot.serverNumericInt = atoi(field);
+			inttobase64(bot.serverNumeric, bot.serverNumericInt, 2);
+			strcpy(bot.server->numeric, bot.serverNumeric);
 		}
 		if(!strcmp(buffer, "NICKNUM")) {
-			bot.nnum = atoi(field);
-			strcpy(bot.ncnum, field);
+			bot.numericInt = atoi(field);
 		}
 	}
-	bot.fullnum[0] = bot.scnum;
-	bot.fullnum[1] = '\0';
-	strcat(bot.fullnum, bot.ncnum);
+	
+	char tmpNum[4];
+	inttobase64(tmpNum, bot.numericInt, 3);
+	sprintf(bot.numeric, "%s%s", bot.serverNumeric, tmpNum);
 	
 	fclose(fp);
 }

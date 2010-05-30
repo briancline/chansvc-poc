@@ -1,40 +1,30 @@
 #include <bot.h>
 
 void parse(char *line) {
-	int i = 0;
-	char *cmd = NULL, *who = NULL, *rest = NULL, parc = 0;
+	int i = 0, parc = 0;
+	char *cmd = NULL;
 	char *parv[100];
 	char ltmp[strlen(line)];
-	
+		
 	strip_newline(line);
 	strcpy(ltmp, line);
-	ssend(":%s PRIVMSG %s :%s\n", bot.nick, bot.protoChan, line);
-	parc = parse_line(line, parv);
+	printf("[RECV] %s\n", line);
+	parc = parse_line(line, parv, 1);
 	
-	if(!parv[1]) return;
-	
-	if(!strcmp(parv[0], "SERVER")) {
-		add_server(parv[1], parv[6][0], bot.server->numeric);
-		bot.uplink = get_serv(parv[6][0]);
-		
-		add_server(bot.server->name, bot.scnum, bot.uplink->numeric);
-		add_nick(bot.nick, bot.ident, bot.host, bot.modes, bot.fullnum);
-		
-		bot.uplink->uplink = bot.server;
-		bot.server->uplink = bot.uplink;
-		
-		notify("SRV (*) %s\n", parv[1]);
-		return;
+	for(i = 0; i < parc; i++) {
+		printf("		parv[%d] = '%s'\n", i, parv[i]);
 	}
 	
-	cmd = parv[1];
-	if(parv[0][0] == ':')
-		*parv[0]++;
-	if(parc >= 4 && parv[3][0] == ':')
-		*parv[3]++;
-	if(!strcmp(parv[0], "PASS"))
-		cmd = parv[0];
+	if(!parv[1])
+		return;
 	
+	cmd = parv[1];
+	
+	if(!strcmp(parv[0], CMD_SERVER)
+			|| !strcmp(parv[0], CMD_ERROR) 
+			|| !strcmp(parv[0], CMD_PASS)) {
+		cmd = parv[0];
+	}
 	
 	for(i = 0; parsetable[i].cmd; i++) {
 		if(!strcmp(parsetable[i].cmd, cmd)) {
@@ -45,31 +35,76 @@ void parse(char *line) {
 }
 
 
+void parse_error(char **parv, int parc) {
+	printf("Error from uplink: %s\n", parv[1]);
+	exit(0);
+}
+
+
+void parse_server_uplink(char **parv, int parc) {
+	char numeric[3];
+	irc_strncpy(numeric, parv[6], 2);
+	
+	print_servers();
+	
+	printf("Numeric is %s/%d.\n", numeric, (int)strlen(numeric));
+	bot.uplink = add_server(parv[1], numeric, bot.server->numeric, parv[parc-1]);
+	
+	print_servers();
+	
+	//bot.uplink->uplink = bot.server;
+	//bot.server->uplink = bot.uplink;
+	
+	notify("SRV (*) %s\n", getServer(numeric)->name);
+	
+	burst_servers();
+	burst_glines();
+	burst_jupes();
+	burst_users();
+	burst_channels();
+	irc_sendToken(bot.serverNumeric, TOK_END_OF_BURST);
+	
+	return;
+}
+
+
 void parse_server(char **parv, int parc) {
-	add_server(parv[2], parv[7][0], parv[0][0]);
+	add_server(parv[2], parv[7], parv[0], parv[parc-1]);
+	print_servers();
 }	
 
 
 void parse_burst(char **parv, int parc) {
-//	notify("BST (%c) %s", parv[0][0], parv[2]);
+	char *modes = NULL;
+	
+	if(*parv[4] == '+')
+		modes = parv[4];
+	
+	struct Channel *chan = add_channel(parv[2], modes, atol(parv[3]));
+	
+	notify("BST (%s) %s", parv[0], chan->name, chan->modes, chan->create_ts);
 }
 
 
 void parse_eob(char **parv, int parc) {
-	if(get_serv(parv[0][0]) == bot.uplink) {
-		ssend("%c EA\n", bot.scnum);
-		notify("EOB (%c) from uplink", parv[0][0]);
+	if(getServer(parv[0]) == bot.uplink) {
+		irc_sendToken(bot.serverNumeric, TOK_END_OF_BURST_ACK);
+		notify("EOB (%s) from uplink", parv[0]);
+	}
+	else {
+		notify("EOB (%s)", parv[0]);
 	}
 }
 
 
 void parse_eob_ack(char **parv, int parc) {
-	notify("EA from %s", get_serv(parv[0][0]));
+	notify("EA from %s", getServer(parv[0]));
 }
 
 
 void parse_ping(char **parv, int parc) {
-	ssend(":%s PONG %s %s\n", bot.server->name, bot.server->name, parv[1]);
+	irc_send(bot.server->numeric, TOK_PONG, "%s %s", 
+		bot.server->numeric, parv[2]);
 }
 
 
@@ -79,21 +114,27 @@ void parse_squit(char **parv, int parc) {
 
 
 void parse_pass(char **parv, int parc) {
-	bot_burst();
+	// do nothing with uplink password...
 }
 
 
 void parse_nick(char **parv, int parc) {
-	struct nickinfo *nick = nicks;
+	struct User *nick = users;
 	
 	if(parc >= 10) {
+		char serverNum[3];
+		irc_strncpy(serverNum, parv[0], 2);
+		
 		if(parv[7][0] == '+') {
-			*parv[7]++;
-			add_nick(parv[2], parv[5], parv[6], parv[7], parv[9]);
+			//*parv[7]++;
+			// add_user(char *nick, char *ident, char *host, char *modes, char *numeric, char *realName)
+			nick = add_user(parv[2], parv[5], parv[6], parv[7], parv[parc-2], parv[parc-1]);
 		}
 		else {
-			add_nick(parv[2], parv[5], parv[6], "+", parv[8]);
+			nick = add_user(parv[2], parv[5], parv[6], "+", parv[parc-2], parv[parc-1]);
 		}
+		
+		nick->server = getServer(serverNum);
 	}
 	else {
 		while(nick) {
@@ -135,22 +176,31 @@ void parse_part(char **parv, int parc) {
 
 
 void parse_create(char **parv, int parc) {
-	struct nickinfo *user;
+	struct User *user;
 	
-	user = get_user(parv[0]);
+	user = getUser(parv[0]);
 	notify("CRT %s %s", user->nick, parv[2]);
 }
 
 
 void parse_privmsg(char **parv, int parc) {
 	int i = 0;
+	struct User* source = getUser(parv[0]);
 	
-	notify("CMD: %s (%d) %s", parv[0], parc, parv[3]);
+	int carc = 0;
+	char *carv[256];
+	carc = parse_line(parv[3], carv, 0);
+	printf("	carc: %d\n", carc);
+	for(i = 0; i < carc; i++) {
+		printf("	carv[%d] = '%s'\n", i, carv[i]);
+	}
+	
+	notify("CMD: %s - %s (%d:%s)", source->nick, carv[0], parc, parv[3]);
 	
 	for(i = 0; commands[i].cmd; i++) {
-		if(!strcasecmp(commands[i].cmd, parv[3])) {
-			if((parc-3) >= commands[i].args) {
-				commands[i].run(parv, parc);
+		if(!strcasecmp(commands[i].cmd, carv[0])) {
+			if((carc - 1) >= commands[i].args) {
+				commands[i].run(source, carv, carc);
 				return;
 			}
 			else {
@@ -163,10 +213,12 @@ void parse_privmsg(char **parv, int parc) {
 
 
 void parse_admin(char **parv, int parc) {
-	ssend(":%s 256 %s :Administrative info about %s\n", bot.server->name, parv[0]);
+	ssend("%s 256 %s :Administrative info about %s\n", 
+		bot.server->numeric, parv[0], bot.server->name);
 }
 
 
 void parse_version(char **parv, int parc) {
-	ssend(":%s 351 %s %s %s :http://mercury.darktech.org/cs/\n", bot.server->name, parv[0], bot.version, bot.server->name);
+	ssend("%s 351 %s %s %s :http://mercury.darktech.org/cs/\n", 
+		bot.server->numeric, parv[0], bot.version, bot.server->name);
 }

@@ -24,7 +24,7 @@ void sig_hup() {
 	close(socketfd);
 	bot.active = false;
 	loadconf();
-	socketfd = get_connection(bot.remotehost, bot.remoteport);
+	socketfd = get_connection(bot.uplinkHost, bot.uplinkPort);
 	if(socketfd == -1) exit(0);
 	bot_init();
 }

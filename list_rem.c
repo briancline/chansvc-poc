@@ -1,7 +1,7 @@
 #include <bot.h>
 
 void rem_server(char *name) {
-	struct servinfo *servptr = servers, *prevsrv, *nextsrv;
+	struct Server *servptr = servers, *prevsrv, *nextsrv;
 	
 	while(servptr) {
 		if(!strcasecmp(servptr->name, name)) {
@@ -14,14 +14,15 @@ void rem_server(char *name) {
 		prevsrv = servptr;
 		servptr = servptr->next;
 	}
-	return; // This should never happen
+	
+	return;
 }
 
 
 void rem_nick(char *nick) {
-	struct nickinfo *nicklist = nicks, *prevnick, *nextnick;
+	struct User *nicklist = users, *prevnick, *nextnick;
 	
-	strcpy(nick, strlwr(nick));
+	strcpy(nick, toLower(nick));
 	
 	while(nicklist) {
 		if(!strcasecmp(nicklist->nick, nick)) {
@@ -34,20 +35,40 @@ void rem_nick(char *nick) {
 		prevnick = nicklist;
 		nicklist = nicklist->next;
 	}
-	return; // This should never happen
+	
+	return;
+}
+
+
+void rem_channel(char *name) {
+	struct Channel *chanlist = channels, *prevchan, *nextchan;
+	
+	while(chanlist) {
+		if(!strcasecmp(chanlist->name, name)) {
+			nextchan = chanlist->next;
+			prevchan->next = nextchan;
+			notify("removed %s", chanlist->name);
+			free(chanlist);
+			return;
+		}
+		prevchan = chanlist;
+		chanlist = chanlist->next;
+	}
+	
+	return;
 }
 
 
 void rem_servs_byserv(char *server) {
-	struct servinfo *servptr = servers, *prevsrv = servers;
+	struct Server *servptr = servers, *prevsrv = servers;
 	
-	rem_nicks_byserv(server);
+	rem_users_byserv(server);
 	
 	while(servptr) {
 		if(servptr->uplink && !strcasecmp(servptr->uplink->name, server)) {
 			if(prevsrv != servptr) prevsrv->next = servptr->next;
 			notify("removed server %s from %s", servptr->name, servptr->uplink);
-			rem_nicks_byserv(servptr->name);
+			rem_users_byserv(servptr->name);
 			rem_servs_byserv(servptr->name);
 			free(servptr);
 			servptr = servptr->next;
@@ -61,8 +82,8 @@ void rem_servs_byserv(char *server) {
 }
 
 
-void rem_nicks_byserv(char *server) {
-	struct nickinfo *nickptr = nicks, *prevnick, *nextnick;
+void rem_users_byserv(char *server) {
+	struct User *nickptr = users, *prevnick, *nextnick;
 	
 	while(nickptr) {
 		if(!strcasecmp(nickptr->server->name, server)) {

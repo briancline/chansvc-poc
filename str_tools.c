@@ -2,23 +2,36 @@
 
 void strip_newline(char *string) {
    char *ptr = NULL;
-   if(ptr = strchr(string, '\r')) *ptr = '\0';
-   if(ptr = strchr(string, '\n')) *ptr = '\0';
+   if((ptr = strchr(string, '\r')))
+ 		*ptr = '\0';
+   if((ptr = strchr(string, '\n')))
+ 		*ptr = '\0';
 }
 
-int parse_line(char *str, char **parv) {
+int parse_line(char *str, char **parv, int stopAtColon) {
 	int i = 0;
 	
-//	fprintf(stdout, "PARSING: %s\n", str);
 	parv[0] = strtok(str, " ");
 	for(i = 1; i < 100; i++) {
-		if(parv[i] = strtok(NULL, " ")) {
-			if(parv[i][0] == ':') *parv[i]++;
+		if((parv[i] = strtok(NULL, " "))) {
+			if(parv[i][0] == ':') {
+				*parv[i]++;
+				
+				if(stopAtColon) {
+					char *token = NULL;
+					while((token = strtok(NULL, " "))) {
+						sprintf(parv[i], "%s %s", parv[i], token);
+					}
+					
+					i++;
+					break;
+				}
+			}
 		}
 		else
 			break;
 	}
-//  fprintf(stdout, "   parc = %d\n\n", i);
+	
 	return i;
 }
 
@@ -33,18 +46,44 @@ char *join_array(char **parv, int start, int end) {
 	return str;
 }
 
-char *strlwr(char *str) {
+char *toLower(char *str) {
 	int i = 0;
+	char buf[strlen(str) + 1];
+	char *p = str;
+	
+	while(*p)
+		buf[i++] = tolower(*p++);
 
-	for(i = 0; i < strlen(str); i++)
-		str[i] = tolower(str[i]);
-	return str;
+	buf[i] = '\0';
+	
+	return buf;
 }
 
-char *strupr(char *str) {
+char *toUpper(char *str) {
 	int i = 0;
+	char buf[strlen(str) + 1];
+	char *p = str;
+	
+	while(*p)
+		buf[i++] = toupper(*p++);
+	
+	buf[i] = '\0';
+	
+	return buf;
+}
 
-	for(i = 0; i < strlen(str); i++)
-		str[i] = toupper(str[i]);
-	return str;
+
+char* irc_strncpy(char* s1, const char* s2, size_t n)
+{
+  char* endp = s1 + n;
+  char* s = s1;
+
+  assert(0 != s1);
+  assert(0 != s2);
+
+  while (s < endp && (*s++ = *s2++))
+    ;
+  if (s == endp)
+    *s = '\0';
+  return s1;
 }

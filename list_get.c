@@ -1,7 +1,7 @@
 #include <bot.h>
 
-struct nickinfo *get_user(char* numeric) {
-	struct nickinfo *userptr = nicks;
+struct User *getUser(char *numeric) {
+	struct User *userptr = users;
 	
 	while(userptr) {
 		if(!strcmp(userptr->numeric, numeric))
@@ -12,11 +12,13 @@ struct nickinfo *get_user(char* numeric) {
 }
 
 
-struct servinfo *get_serv(char numeric) {
-	struct servinfo *servptr = servers;
+struct Server *getServer(char *numeric) {
+	//printf("getServer('%s'/%d)\n", numeric, (int)strlen(numeric));
+	struct Server *servptr = servers;
 	
 	while(servptr) {
-		if(servptr->numeric == numeric)
+		//printf("		'%s'/%d\n", servptr->numeric, (int)strlen(servptr->numeric));
+		if(!strcmp(servptr->numeric, numeric))
 			return servptr;
 		servptr = servptr->next;
 	}
@@ -24,8 +26,20 @@ struct servinfo *get_serv(char numeric) {
 }
 
 
-struct nickinfo *get_usernum(char *nick) {
-	struct nickinfo *userptr = nicks;
+struct Channel *getChannel(char *name) {
+	struct Channel *chanptr = channels;
+	
+	while(chanptr) {
+		if(!strcasecmp(chanptr->name, name))
+			return chanptr;
+		chanptr = chanptr->next;
+	}
+	return 0;
+}
+
+
+struct User *getUserByNick(char *nick) {
+	struct User *userptr = users;
 	
 	while(userptr) {
 		if(!strcasecmp(userptr->nick, nick))
@@ -36,8 +50,8 @@ struct nickinfo *get_usernum(char *nick) {
 }
 
 
-struct servinfo *get_servnum(char *server) {
-	struct servinfo *servptr = servers;
+struct Server *getServerByNum(char *server) {
+	struct Server *servptr = servers;
 	
 	while(servptr) {
 		if(!strcasecmp(servptr->name, server))
